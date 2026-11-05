@@ -1,0 +1,8 @@
+{
+  "name": "Remix CampusWire Zambia",
+  "description": "A secure, anonymous platform for Zambian students to share campus news, updates, and discussions within their university community.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

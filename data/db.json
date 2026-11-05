@@ -1,0 +1,103 @@
+{
+  "users": [
+    {
+      "id": "user-default-1",
+      "email": "student@unza.zm",
+      "passwordHash": "pass123",
+      "realName": "Innocent Phiri",
+      "alias": "ZedScholar_ZM",
+      "university": "unza",
+      "campus": "Great East Road Campus",
+      "program": "Computer Science",
+      "year": 3,
+      "token": "tok_demo_zed_unza_998",
+      "createdAt": "2026-11-05T18:08:09.870Z"
+    }
+  ],
+  "posts": [
+    {
+      "id": "post-live-1",
+      "title": "UNZA Main Library Exam Night Study Guidelines & WiFi Boost",
+      "content": "Fellow monks and mommas, UNZA Library has increased WiFi bandwidth in basement reading halls ahead of semester finals. Power sockets have also been serviced.",
+      "university": "unza",
+      "campusBranch": "Great East Road",
+      "category": "exams",
+      "authorAlias": "LibraryMonk",
+      "isAnonymous": false,
+      "upvotes": 42,
+      "downvotes": 1,
+      "commentsCount": 3,
+      "timestamp": "Just now",
+      "tags": [
+        "UNZA",
+        "Exams",
+        "Library",
+        "WiFi"
+      ],
+      "comments": [
+        {
+          "id": "c-1",
+          "postId": "post-live-1",
+          "authorAlias": "RidgewayDoc",
+          "authorUniversity": "unza",
+          "content": "Confirmed, downloading anatomy slides without lag today!",
+          "upvotes": 8,
+          "timestamp": "15m ago"
+        }
+      ]
+    },
+    {
+      "id": "post-live-2",
+      "title": "CBU Riverside Engineering Workshop Exhibition Tomorrow",
+      "content": "All CBU engineering students are welcome to the Jambo Drive innovation hall tomorrow at 10:00 AM for the annual robotics and mining tech demo.",
+      "university": "cbu",
+      "campusBranch": "Riverside Kitwe",
+      "category": "events",
+      "authorAlias": "CopperGeek",
+      "isAnonymous": true,
+      "upvotes": 35,
+      "downvotes": 0,
+      "commentsCount": 1,
+      "timestamp": "1h ago",
+      "tags": [
+        "CBU",
+        "Engineering",
+        "Innovation"
+      ],
+      "comments": []
+    }
+  ],
+  "polls": [
+    {
+      "id": "poll-server-1",
+      "question": "Which university library has the fastest WiFi for exam prep?",
+      "university": "all",
+      "options": [
+        {
+          "id": "opt-1",
+          "text": "UNZA Great East Road Library",
+          "votes": 142
+        },
+        {
+          "id": "opt-2",
+          "text": "CBU Riverside Knowledge Centre",
+          "votes": 118
+        },
+        {
+          "id": "opt-3",
+          "text": "ZCAS University Digital Lab",
+          "votes": 89
+        },
+        {
+          "id": "opt-4",
+          "text": "Mulungushi Great North Resource Hall",
+          "votes": 64
+        }
+      ],
+      "totalVotes": 413,
+      "closingDate": "2026-12-01",
+      "category": "Academics"
+    }
+  ],
+  "votes": {}
+}

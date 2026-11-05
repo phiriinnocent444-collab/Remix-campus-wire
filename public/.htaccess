@@ -1,0 +1,44 @@
+# ====================================================================
+# InfinityFree / Apache .htaccess for ZedWhisper (Full-Stack React + PHP API)
+# Place this in your InfinityFree htdocs/ folder
+# ====================================================================
+
+Options -MultiViews
+RewriteEngine On
+RewriteBase /
+
+# Ensure HTTPS redirect on InfinityFree
+RewriteCond %{HTTP:X-Forwarded-Proto} !https
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# API Routing to InfinityFree PHP Backend
+RewriteRule ^api/auth/register/?$ api/auth.php?action=register [QSA,L]
+RewriteRule ^api/auth/login/?$ api/auth.php?action=login [QSA,L]
+RewriteRule ^api/auth/me/?$ api/auth.php?action=me [QSA,L]
+RewriteRule ^api/posts/([0-9a-zA-Z_-]+)/vote/?$ api/posts.php?action=vote&id=$1 [QSA,L]
+RewriteRule ^api/posts/([0-9a-zA-Z_-]+)/comments/?$ api/posts.php?action=comment&id=$1 [QSA,L]
+RewriteRule ^api/posts/?$ api/posts.php [QSA,L]
+RewriteRule ^api/health/?$ api/health.php [QSA,L]
+
+# Do not rewrite if physical file or directory exists
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Redirect all frontend requests to index.html for React SPA Router
+RewriteRule ^ index.html [QSA,L]
+
+# Enable GZIP compression for fast loading on Zambian mobile networks (Airtel / MTN / Zamtel)
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/json
+</IfModule>
+
+# Browser Caching Headers
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType image/svg+xml "access plus 1 month"
+  ExpiresByType image/png "access plus 1 month"
+  ExpiresByType image/jpeg "access plus 1 month"
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+</IfModule>
