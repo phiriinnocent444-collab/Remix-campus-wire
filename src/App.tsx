@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
   CampusGiftItem,
+  CampusMention,
   CampusPoll,
   ChatConversation,
   CurrentUser,
+  EmojiReactionType,
   GossipPost,
   PostCategory,
   StudentProfile,
@@ -18,6 +20,7 @@ import {
   UNIVERSITIES,
 } from './data/mockData';
 import { filterPosts, isSecretCrushMutual } from './utils/rules';
+import { extractMentions, INITIAL_MENTIONS } from './utils/mentions';
 import { Navbar } from './components/Navbar';
 import { UniversityFilterBar } from './components/UniversityFilterBar';
 import { CategoryFilterBar } from './components/CategoryFilterBar';
@@ -31,13 +34,12 @@ import { CampusPolls } from './components/CampusPolls';
 import { DirectMessages } from './components/DirectMessages';
 import { StudentProfileModal } from './components/StudentProfileModal';
 import { SafetyGuidelinesModal } from './components/SafetyGuidelinesModal';
-import { SupabaseModal } from './components/SupabaseModal';
 import { StudentQrModal } from './components/StudentQrModal';
 import { CampusGoogleMap } from './components/CampusGoogleMap';
 import { CampusEventCalendar } from './components/CampusEventCalendar';
 import { LiveEnvironmentalBackground } from './components/LiveEnvironmentalBackground';
 import { AuthModal } from './components/AuthModal';
-import { InfinityFreeModal } from './components/InfinityFreeModal';
+import { MentionsFeed } from './components/MentionsFeed';
 import {
   fetchBackendPosts,
   createBackendPost,
@@ -63,13 +65,13 @@ import {
   broadcastDirectMessage,
   SupabaseHealth,
 } from './lib/supabase';
-import { Flame, ShieldCheck, Heart, Sparkles, Check, Bell, Database, Bookmark, MessageSquare } from 'lucide-react';
+import { Flame, ShieldCheck, Heart, Sparkles, Check, Bell, Bookmark, MessageSquare, AtSign } from 'lucide-react';
 import { CAMPUS_EVENTS } from './data/campusLocationsAndEvents';
 
 export default function App() {
   // Navigation State
   const [activeTab, setActiveTab] = useState<
-    'feed' | 'dating' | 'secret_crush' | 'polls' | 'messages' | 'map' | 'calendar' | 'saved'
+    'feed' | 'dating' | 'secret_crush' | 'polls' | 'messages' | 'map' | 'calendar' | 'saved' | 'mentions'
   >('feed');
 
 
@@ -160,13 +162,66 @@ export default function App() {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isSafetyModalOpen, setIsSafetyModalOpen] = useState(false);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
-  const [isSupabaseModalOpen, setIsSupabaseModalOpen] = useState(false);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [isGmpQuotaExceeded, setIsGmpQuotaExceeded] = useState(false);
   const [presetVenue, setPresetVenue] = useState<{ name: string; university: UniversityId } | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [isInfinityFreeModalOpen, setIsInfinityFreeModalOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Peer Mentions & Notifications State
+  const [mentions, setMentions] = useState<CampusMention[]>(() => {
+    try {
+      const saved = localStorage.getItem('zedwhisper_mentions');
+      return saved ? JSON.parse(saved) : INITIAL_MENTIONS;
+    } catch {
+      return INITIAL_MENTIONS;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('zedwhisper_mentions', JSON.stringify(mentions));
+    } catch {}
+  }, [mentions]);
+
+  const unreadMentionsCount = mentions.filter((m) => !m.isRead).length;
+
+  const handleToggleReaction = (
+    postId: string,
+    commentId: string | undefined,
+    reactionType: EmojiReactionType
+  ) => {
+    setPosts((prev) =>
+      prev.map((p) => {
+        if (p.id !== postId) return p;
+        if (!commentId) {
+          const userReactions = p.userReactions || [];
+          const hasReacted = userReactions.includes(reactionType);
+          const newUserReactions = hasReacted
+            ? userReactions.filter((r) => r !== reactionType)
+            : [...userReactions, reactionType];
+          const reactions = { ...(p.reactions || {}) };
+          const currentCount = reactions[reactionType] || 0;
+          reactions[reactionType] = Math.max(0, currentCount + (hasReacted ? -1 : 1));
+          return { ...p, reactions, userReactions: newUserReactions };
+        } else {
+          const updatedComments = p.comments.map((c) => {
+            if (c.id !== commentId) return c;
+            const userReactions = c.userReactions || [];
+            const hasReacted = userReactions.includes(reactionType);
+            const newUserReactions = hasReacted
+              ? userReactions.filter((r) => r !== reactionType)
+              : [...userReactions, reactionType];
+            const reactions = { ...(c.reactions || {}) };
+            const currentCount = reactions[reactionType] || 0;
+            reactions[reactionType] = Math.max(0, currentCount + (hasReacted ? -1 : 1));
+            return { ...c, reactions, userReactions: newUserReactions };
+          });
+          return { ...p, comments: updatedComments };
+        }
+      })
+    );
+  };
 
   const handleAuthSuccess = (authUser: AuthStudent) => {
     setIsLoggedIn(true);
@@ -233,14 +288,6 @@ export default function App() {
         setPosts(backendPosts);
       }
     });
-
-    // Check for discreet admin trigger in URL: ?admin=true or ?db=true or #admin
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('admin') === 'true' || params.get('db') === 'true' || window.location.hash === '#admin') {
-        setIsSupabaseModalOpen(true);
-      }
-    }
 
     // 1. Supabase Realtime Broadcast Channel: Instant sub-50ms peer-to-peer sync across all phones
     const broadcastChannel = getLiveBroadcastChannel();
@@ -628,7 +675,7 @@ export default function App() {
     broadcastNewPost(newPost);
     // Save to central Supabase cloud database
     createSupabasePost(newPost);
-    // Save to Full-Stack Node/Express & InfinityFree MySQL
+    // Save to Full-Stack Node/Express & MySQL
     createBackendPost({
       title: newPostData.title,
       content: newPostData.content,
@@ -639,6 +686,28 @@ export default function App() {
       isAnonymous: newPostData.isAnonymous,
       tags: newPostData.tags,
     });
+
+    // Extract @mentions from post content
+    const mentionedAliases = extractMentions(newPostData.content);
+    if (mentionedAliases.length > 0) {
+      const newMentions: CampusMention[] = mentionedAliases.map((alias) => ({
+        id: `mention-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        postId: newPost.id,
+        postTitle: newPost.title,
+        mentionedAlias: alias,
+        authorAlias,
+        authorUniversity: newPost.university,
+        snippet: newPost.content.slice(0, 160),
+        timestamp: 'Just now',
+        isRead: false,
+        type: 'post',
+      }));
+      setMentions((prev) => [...newMentions, ...prev]);
+      if (mentionedAliases.some((a) => a.toLowerCase() === currentUser.alias.toLowerCase())) {
+        showToast('You were @mentioned in a new whisper! 🔔');
+      }
+    }
+
     showToast('Campus activity update published! 📢');
   };
 
@@ -660,7 +729,7 @@ export default function App() {
 
     const targetPost = posts.find((p) => p.id === postId);
     addSupabaseComment(newComment, targetPost ? targetPost.commentsCount : 0);
-    // Sync to Full-Stack Node & InfinityFree PHP
+    // Sync to Full-Stack Node backend
     addBackendComment(postId, {
       content: commentText,
       authorAlias,
@@ -668,6 +737,28 @@ export default function App() {
     });
     // Instant broadcast of new comment to all devices
     broadcastNewComment(postId, newComment);
+
+    // Extract @mentions from comment text
+    const mentionedAliases = extractMentions(commentText);
+    if (mentionedAliases.length > 0 && targetPost) {
+      const newMentions: CampusMention[] = mentionedAliases.map((alias) => ({
+        id: `mention-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        postId: targetPost.id,
+        postTitle: targetPost.title,
+        commentId: newComment.id,
+        mentionedAlias: alias,
+        authorAlias,
+        authorUniversity: currentUser.university,
+        snippet: commentText.slice(0, 160),
+        timestamp: 'Just now',
+        isRead: false,
+        type: 'comment',
+      }));
+      setMentions((prev) => [...newMentions, ...prev]);
+      if (mentionedAliases.some((a) => a.toLowerCase() === currentUser.alias.toLowerCase())) {
+        showToast('You were @mentioned in a reply! 🔔');
+      }
+    }
 
     setPosts((prev) =>
       prev.map((p) => {
@@ -985,10 +1076,8 @@ export default function App() {
         onSelectEvent={(evt) => {
           setActiveTab('calendar');
         }}
-        onOpenSupabase={() => setIsSupabaseModalOpen(true)}
-        isSupabaseReady={supabaseHealth.tableReady}
+        mentionsCount={unreadMentionsCount}
         onOpenAuth={() => setIsAuthModalOpen(true)}
-        onOpenInfinityFree={() => setIsInfinityFreeModalOpen(true)}
         isLoggedIn={isLoggedIn}
       />
 
@@ -1025,6 +1114,14 @@ export default function App() {
                 bookmarkedIds={currentUser.bookmarkedPostIds}
                 onReport={handleReport}
                 onOpenComposer={() => setIsComposerOpen(true)}
+                onToggleReaction={handleToggleReaction}
+                onMentionClick={(alias) => {
+                  const peer = profiles.find((p) => p.alias.toLowerCase() === alias.toLowerCase());
+                  if (peer) {
+                    setTargetProfileForGift(peer);
+                    setIsGiftsModalOpen(true);
+                  }
+                }}
               />
             </div>
 
@@ -1236,14 +1333,44 @@ export default function App() {
             )}
           </div>
         )}
+
+        {/* Tab 9: Dedicated Peer Mentions Tab */}
+        {activeTab === 'mentions' && (
+          <div className="max-w-4xl mx-auto space-y-6">
+            <MentionsFeed
+              mentions={mentions}
+              currentUser={currentUser}
+              onSelectMention={(m) => {
+                const targetPost = posts.find((p) => p.id === m.postId);
+                if (targetPost) {
+                  setSelectedPostForDetail(targetPost);
+                }
+              }}
+              onMarkAllAsRead={() => {
+                setMentions((prev) => prev.map((m) => ({ ...m, isRead: true })));
+              }}
+              onMarkAsRead={(id) => {
+                setMentions((prev) =>
+                  prev.map((m) => (m.id === id ? { ...m, isRead: true } : m))
+                );
+              }}
+              onMentionClickAlias={(alias) => {
+                const peer = profiles.find((p) => p.alias.toLowerCase() === alias.toLowerCase());
+                if (peer) {
+                  setTargetProfileForGift(peer);
+                  setIsGiftsModalOpen(true);
+                }
+              }}
+            />
+          </div>
+        )}
       </main>
 
-
       {/* Footer */}
-      <footer className="border-t border-slate-200 dark:border-slate-800 py-6 bg-white dark:bg-slate-900 text-xs text-slate-500 transition-colors">
+      <footer className="border-t border-[#1e294b] py-6 bg-[#080d1a] text-xs text-slate-400 transition-colors">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
-            <span className="font-display font-bold text-slate-900 dark:text-white">
+            <span className="font-display font-bold text-white">
               ZedWhisper
             </span>
             <span>·</span>
@@ -1253,30 +1380,22 @@ export default function App() {
           <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs">
             <button
               onClick={() => setIsSafetyModalOpen(true)}
-              className="hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+              className="hover:text-white transition-colors cursor-pointer"
             >
               Cyber Safety Rules
             </button>
             <button
               onClick={() => setIsProfileModalOpen(true)}
-              className="hover:text-slate-800 dark:hover:text-slate-200 transition-colors cursor-pointer"
+              className="hover:text-white transition-colors cursor-pointer"
             >
               My Campus ID
             </button>
             <button
               onClick={() => setIsQrModalOpen(true)}
-              className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex items-center gap-1.5 text-slate-400 cursor-pointer"
-              title="Campus Social QR Code & WhatsApp Gateway"
+              className="hover:text-emerald-400 transition-colors flex items-center gap-1.5 text-slate-400 cursor-pointer"
+              title="Campus Social QR Code"
             >
               <span>Social QR Code</span>
-            </button>
-            <button
-              onClick={() => setIsSupabaseModalOpen(true)}
-              className="hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors flex items-center gap-1.5 text-slate-400 cursor-pointer"
-              title="Campus Cloud Database & Schema Setup"
-            >
-              <Database className="w-3.5 h-3.5 text-emerald-500" />
-              <span>Cloud & SQL Settings</span>
             </button>
             <span>© 2026 ZedWhisper Zambia</span>
           </div>
@@ -1302,6 +1421,14 @@ export default function App() {
         onAddComment={handleAddComment}
         onVoteComment={handleVoteComment}
         onReport={handleReport}
+        onToggleReaction={handleToggleReaction}
+        onMentionClick={(alias) => {
+          const peer = profiles.find((p) => p.alias.toLowerCase() === alias.toLowerCase());
+          if (peer) {
+            setTargetProfileForGift(peer);
+            setIsGiftsModalOpen(true);
+          }
+        }}
       />
 
       <GiftsModal
@@ -1339,22 +1466,10 @@ export default function App() {
         onClose={() => setIsSafetyModalOpen(false)}
       />
 
-      <SupabaseModal
-        isOpen={isSupabaseModalOpen}
-        onClose={() => setIsSupabaseModalOpen(false)}
-        health={supabaseHealth}
-        onRefreshHealth={refreshSupabase}
-      />
-
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         onAuthSuccess={handleAuthSuccess}
-      />
-
-      <InfinityFreeModal
-        isOpen={isInfinityFreeModalOpen}
-        onClose={() => setIsInfinityFreeModalOpen(false)}
       />
     </div>
   );

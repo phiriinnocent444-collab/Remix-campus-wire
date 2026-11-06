@@ -17,13 +17,64 @@ export const MentionAutocomplete: React.FC<MentionAutocompleteProps> = ({
 }) => {
   const clean = query.toLowerCase().replace(/^@/, '');
 
-  const filtered = STUDENT_PROFILES.filter(
-    (p) =>
-      p.alias.toLowerCase().includes(clean) ||
-      p.name.toLowerCase().includes(clean) ||
-      p.program.toLowerCase().includes(clean) ||
-      p.university.toLowerCase().includes(clean)
-  ).slice(0, 5);
+  // Complete list of student peers for mentions autocomplete
+  const allPeers: Array<{
+    id: string;
+    alias: string;
+    name: string;
+    university: StudentProfile['university'];
+    program: string;
+  }> = [
+    ...STUDENT_PROFILES.map((p) => ({
+      id: p.id,
+      alias: p.alias,
+      name: p.name,
+      university: p.university,
+      program: p.program,
+    })),
+    {
+      id: 'peer-coppergeek',
+      alias: 'CopperGeek',
+      name: 'Kondwani Zulu',
+      university: 'cbu',
+      program: 'BSc Computer Engineering (CBU)',
+    },
+    {
+      id: 'peer-librarymonk',
+      alias: 'LibraryMonk',
+      name: 'Bwalya Chanda',
+      university: 'unza',
+      program: 'BA Library & Information Science (UNZA)',
+    },
+    {
+      id: 'peer-ridgewaydoc',
+      alias: 'RidgewayDoc',
+      name: 'Natasha Phiri',
+      university: 'unza',
+      program: 'MBChB Medicine & Surgery (Ridgeway)',
+    },
+    {
+      id: 'peer-zedscholar',
+      alias: 'ZedScholar_ZM',
+      name: 'Innocent Phiri',
+      university: 'unza',
+      program: 'BSc Computer Science (UNZA)',
+    },
+  ];
+
+  // Remove duplicate aliases
+  const uniquePeers = Array.from(new Map(allPeers.map((p) => [p.alias.toLowerCase(), p])).values());
+
+  const filtered = uniquePeers
+    .filter(
+      (p) =>
+        !clean ||
+        p.alias.toLowerCase().includes(clean) ||
+        p.name.toLowerCase().includes(clean) ||
+        p.program.toLowerCase().includes(clean) ||
+        p.university.toLowerCase().includes(clean)
+    )
+    .slice(0, 5);
 
   if (filtered.length === 0) return null;
 
