@@ -462,10 +462,257 @@ app.get('/api/infinityfree/status', (req: Request, res: Response) => {
       '/api/auth.php (Register, Login, Session)',
       '/api/posts.php (List, Create, Vote, Comment)',
       '/api/polls.php (List & Vote)',
-      '/api/db.php (PDO MySQL auto-connection & table creation)',
+      '/api/dev.php (Dev Lab Schema, SQL Sandbox & REST Catalog)',
+      '/api/db.php (PDO MySQL & SQLite Auto-Fallback)',
     ],
     recommendedPhpVersion: 'PHP 8.2',
     instructionsUrl: '/INFINITYFREE_DEPLOYMENT_GUIDE.md',
+  });
+});
+
+// DEV LAB: Database Schema Endpoint
+app.get('/api/dev/schema', (req: Request, res: Response) => {
+  res.json({
+    database: 'zedwhisper_db (PostgreSQL / MySQL compatible)',
+    tables: [
+      {
+        name: 'users',
+        description: 'Registered university students across UNZA, CBU, Mulungushi, etc.',
+        rowCount: getDb().users.length,
+        columns: [
+          { name: 'id', type: 'VARCHAR(64)', isPrimaryKey: true, nullable: false, description: 'Unique student identifier' },
+          { name: 'email', type: 'VARCHAR(128)', isPrimaryKey: false, nullable: false, description: 'Verified student university email' },
+          { name: 'real_name', type: 'VARCHAR(128)', isPrimaryKey: false, nullable: false, description: 'Student full legal name' },
+          { name: 'alias', type: 'VARCHAR(64)', isPrimaryKey: false, nullable: false, description: 'Public or anonymous campus handle' },
+          { name: 'university', type: 'VARCHAR(32)', isPrimaryKey: false, nullable: false, description: 'University acronym (unza, cbu, etc.)' },
+          { name: 'program', type: 'VARCHAR(128)', isPrimaryKey: false, nullable: true, description: 'Academic program of study' },
+          { name: 'year', type: 'INT', isPrimaryKey: false, nullable: true, description: 'Academic year (1-7)' },
+          { name: 'created_at', type: 'TIMESTAMP', isPrimaryKey: false, nullable: false, description: 'Account creation date' },
+        ],
+      },
+      {
+        name: 'posts',
+        description: 'Campus discussions, academic notices, and student whispers',
+        rowCount: getDb().posts.length,
+        columns: [
+          { name: 'id', type: 'VARCHAR(64)', isPrimaryKey: true, nullable: false, description: 'Unique post identifier' },
+          { name: 'title', type: 'VARCHAR(255)', isPrimaryKey: false, nullable: false, description: 'Post heading' },
+          { name: 'content', type: 'TEXT', isPrimaryKey: false, nullable: false, description: 'Body text content' },
+          { name: 'university', type: 'VARCHAR(32)', isPrimaryKey: false, nullable: false, description: 'Target campus filter' },
+          { name: 'category', type: 'VARCHAR(32)', isPrimaryKey: false, nullable: false, description: 'Category (exams, events, gossip, etc.)' },
+          { name: 'author_alias', type: 'VARCHAR(64)', isPrimaryKey: false, nullable: false, description: 'Author display name' },
+          { name: 'upvotes', type: 'INT', isPrimaryKey: false, nullable: false, description: 'Total upvotes count' },
+          { name: 'comments_count', type: 'INT', isPrimaryKey: false, nullable: false, description: 'Total comments count' },
+          { name: 'timestamp', type: 'VARCHAR(32)', isPrimaryKey: false, nullable: false, description: 'Relative time label' },
+        ],
+      },
+      {
+        name: 'polls',
+        description: 'Campus community polls and voting analytics',
+        rowCount: getDb().polls.length,
+        columns: [
+          { name: 'id', type: 'VARCHAR(64)', isPrimaryKey: true, nullable: false, description: 'Unique poll ID' },
+          { name: 'question', type: 'TEXT', isPrimaryKey: false, nullable: false, description: 'Poll survey prompt' },
+          { name: 'university', type: 'VARCHAR(32)', isPrimaryKey: false, nullable: false, description: 'Target university' },
+          { name: 'total_votes', type: 'INT', isPrimaryKey: false, nullable: false, description: 'Sum of all options votes' },
+          { name: 'closing_date', type: 'DATE', isPrimaryKey: false, nullable: false, description: 'Poll expiration date' },
+        ],
+      },
+    ],
+  });
+});
+
+// DEV LAB: Interactive SQL Query Engine
+app.post('/api/dev/sql', (req: Request, res: Response) => {
+  const startTime = Date.now();
+  const rawSql = String(req.body?.sql || '').trim();
+
+  if (!rawSql) {
+    return res.status(400).json({
+      success: false,
+      error: 'Empty SQL query. Try: SELECT * FROM posts LIMIT 10;',
+      executionTimeMs: 0,
+    });
+  }
+
+  const db = getDb();
+  const sql = rawSql.replace(/;+$/, '').trim();
+  const normalized = sql.toLowerCase();
+
+  try {
+    // SELECT query parser
+    if (normalized.startsWith('select')) {
+      let targetTable = '';
+      if (normalized.includes('from users')) targetTable = 'users';
+      else if (normalized.includes('from posts')) targetTable = 'posts';
+      else if (normalized.includes('from polls')) targetTable = 'polls';
+      else if (normalized.includes('from comments')) targetTable = 'comments';
+      else {
+        return res.status(400).json({
+          success: false,
+          error: `Table not found. Available tables in ZedWhisper schema: 'users', 'posts', 'polls'.`,
+          executionTimeMs: Date.now() - startTime,
+        });
+      }
+
+      let data: any[] = [];
+      if (targetTable === 'users') {
+        data = db.users.map((u) => ({
+          id: u.id,
+          email: u.email,
+          real_name: u.realName,
+          alias: u.alias,
+          university: u.university,
+          program: u.program,
+          year: u.year,
+          created_at: u.createdAt,
+        }));
+      } else if (targetTable === 'posts') {
+        data = db.posts.map((p) => ({
+          id: p.id,
+          title: p.title,
+          university: p.university,
+          category: p.category,
+          author_alias: p.authorAlias,
+          upvotes: p.upvotes,
+          downvotes: p.downvotes,
+          comments_count: p.commentsCount,
+          timestamp: p.timestamp,
+        }));
+      } else if (targetTable === 'polls') {
+        data = db.polls.map((pl) => ({
+          id: pl.id,
+          question: pl.question,
+          university: pl.university,
+          total_votes: pl.totalVotes,
+          closing_date: pl.closingDate,
+          options_count: pl.options?.length || 0,
+        }));
+      }
+
+      // Simple WHERE filter: e.g. university = 'unza'
+      const whereMatch = normalized.match(/where\s+([a-z_]+)\s*(=|!=|>|<|like)\s*['"]?([a-z0-9_ -%]+)['"]?/);
+      if (whereMatch) {
+        const [, col, op, val] = whereMatch;
+        const cleanVal = val.replace(/['"%]/g, '').trim();
+        data = data.filter((row) => {
+          const rowVal = String(row[col] ?? '').toLowerCase();
+          if (op === '=') return rowVal === cleanVal;
+          if (op === '!=') return rowVal !== cleanVal;
+          if (op === '>') return Number(row[col]) > Number(cleanVal);
+          if (op === '<') return Number(row[col]) < Number(cleanVal);
+          if (op === 'like') return rowVal.includes(cleanVal);
+          return true;
+        });
+      }
+
+      // Simple ORDER BY: e.g. ORDER BY upvotes DESC
+      const orderMatch = normalized.match(/order\s+by\s+([a-z_]+)(\s+(asc|desc))?/);
+      if (orderMatch) {
+        const col = orderMatch[1];
+        const isDesc = orderMatch[3] === 'desc';
+        data.sort((a, b) => {
+          const aVal = a[col];
+          const bVal = b[col];
+          if (typeof aVal === 'number' && typeof bVal === 'number') {
+            return isDesc ? bVal - aVal : aVal - bVal;
+          }
+          return isDesc
+            ? String(bVal).localeCompare(String(aVal))
+            : String(aVal).localeCompare(String(bVal));
+        });
+      }
+
+      // Simple LIMIT: e.g. LIMIT 5
+      const limitMatch = normalized.match(/limit\s+([0-9]+)/);
+      if (limitMatch) {
+        const limit = parseInt(limitMatch[1], 10);
+        data = data.slice(0, limit);
+      }
+
+      const columns = data.length > 0 ? Object.keys(data[0]) : [];
+      return res.json({
+        success: true,
+        query: sql,
+        columns,
+        rows: data,
+        rowCount: data.length,
+        executionTimeMs: Date.now() - startTime,
+      });
+    }
+
+    // SHOW TABLES
+    if (normalized.startsWith('show tables') || normalized.startsWith('\\dt')) {
+      return res.json({
+        success: true,
+        query: sql,
+        columns: ['table_name', 'engine', 'records'],
+        rows: [
+          { table_name: 'users', engine: 'InnoDB / PostgreSQL', records: db.users.length },
+          { table_name: 'posts', engine: 'InnoDB / PostgreSQL', records: db.posts.length },
+          { table_name: 'polls', engine: 'InnoDB / PostgreSQL', records: db.polls.length },
+        ],
+        rowCount: 3,
+        executionTimeMs: Date.now() - startTime,
+      });
+    }
+
+    return res.status(400).json({
+      success: false,
+      error: `Unsupported query type in sandbox. Supported: SELECT ... FROM [users|posts|polls] [WHERE ...] [ORDER BY ...] [LIMIT ...], or SHOW TABLES.`,
+      executionTimeMs: Date.now() - startTime,
+    });
+  } catch (err: any) {
+    return res.status(500).json({
+      success: false,
+      error: err.message || 'SQL execution failed.',
+      executionTimeMs: Date.now() - startTime,
+    });
+  }
+});
+
+// DEV LAB: API Endpoint Catalog
+app.get('/api/dev/endpoints', (req: Request, res: Response) => {
+  res.json({
+    title: 'ZedWhisper University Live Express REST API Catalog',
+    baseUrl: `http://localhost:${PORT}`,
+    endpoints: [
+      {
+        path: '/api/health',
+        method: 'GET',
+        description: 'Server health check, platform status, total record counts',
+      },
+      {
+        path: '/api/posts',
+        method: 'GET',
+        description: 'List posts with optional filters (?university=unza&category=exams&sortBy=trending)',
+      },
+      {
+        path: '/api/posts',
+        method: 'POST',
+        description: 'Publish a new campus post or discussion thread',
+      },
+      {
+        path: '/api/posts/:id/vote',
+        method: 'POST',
+        description: 'Upvote or downvote an existing post',
+      },
+      {
+        path: '/api/polls',
+        method: 'GET',
+        description: 'Get active university survey polls',
+      },
+      {
+        path: '/api/dev/sql',
+        method: 'POST',
+        description: 'Execute SQL queries against student database tables',
+      },
+      {
+        path: '/api/dev/schema',
+        method: 'GET',
+        description: 'Get relational database schema definitions',
+      },
+    ],
   });
 });
 

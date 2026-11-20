@@ -23,12 +23,17 @@ import {
   Server,
   LogIn,
   AtSign,
+  Menu,
+  ShoppingBag,
+  ShoppingCart,
+  Code,
 } from 'lucide-react';
-import { CampusEvent, CurrentUser, GossipPost, StudentProfile } from '../types';
+import { AppTab, CampusEvent, CurrentUser, GossipPost, StudentProfile } from '../types';
 
 interface NavbarProps {
-  activeTab: 'feed' | 'dating' | 'secret_crush' | 'polls' | 'messages' | 'map' | 'calendar' | 'saved' | 'mentions';
-  setActiveTab: (tab: 'feed' | 'dating' | 'secret_crush' | 'polls' | 'messages' | 'map' | 'calendar' | 'saved' | 'mentions') => void;
+  onToggleSidebar?: () => void;
+  activeTab: AppTab;
+  setActiveTab: (tab: AppTab) => void;
   currentUser: CurrentUser;
   onOpenComposer: () => void;
   onOpenProfile: () => void;
@@ -38,6 +43,8 @@ interface NavbarProps {
   unreadCount: number;
   mentionsCount?: number;
   savedCount: number;
+  cartCount?: number;
+  onOpenCart?: () => void;
   posts: GossipPost[];
   profiles: StudentProfile[];
   events: CampusEvent[];
@@ -49,6 +56,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
+  onToggleSidebar,
   activeTab,
   setActiveTab,
   currentUser,
@@ -60,6 +68,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   unreadCount,
   mentionsCount = 0,
   savedCount,
+  cartCount = 0,
+  onOpenCart,
   posts,
   profiles,
   events,
@@ -129,8 +139,19 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="sticky top-0 z-40 bg-[#080d1a]/95 backdrop-blur-md border-b border-[#1e294b] transition-colors">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-2 lg:gap-4 h-16">
-          {/* Zone 1: Wordmark Logo */}
-          <div className="flex items-center gap-2.5 shrink-0">
+          {/* Zone 1: Wordmark Logo & Sidebar Toggle */}
+          <div className="flex items-center gap-2 shrink-0">
+            {onToggleSidebar && (
+              <button
+                onClick={onToggleSidebar}
+                className="p-1.5 -ml-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                aria-label="Toggle navigation menu"
+                title="Toggle Topics & Universities"
+              >
+                <Menu className="w-5 h-5" />
+              </button>
+            )}
+
             <button
               onClick={() => setActiveTab('feed')}
               className="flex items-center gap-2 text-left group cursor-pointer"
@@ -387,6 +408,52 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             <button
+              onClick={() => setActiveTab('marketplace')}
+              className={`relative px-2 py-1.5 rounded-lg transition-colors whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'marketplace'
+                  ? 'text-emerald-300 bg-emerald-950/50 font-semibold'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Campus Marketplace / ZedStore"
+            >
+              <ShoppingBag className="w-4 h-4 text-emerald-400" />
+              <span>Store</span>
+              {cartCount > 0 && (
+                <span className="w-4 h-4 rounded-full bg-emerald-500 text-slate-950 text-[10px] font-bold flex items-center justify-center">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('cinema')}
+              className={`relative px-2 py-1.5 rounded-lg transition-colors whitespace-nowrap flex items-center gap-1 cursor-pointer ${
+                activeTab === 'cinema' || activeTab === 'cornhub'
+                  ? 'text-white bg-[#ff9900]/20 font-bold border border-[#ff9900]/50'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="ZedWhisper Video Hub - Student Campus Cinema"
+            >
+              <span className="font-black text-white text-xs tracking-tight">Zed</span>
+              <span className="bg-[#ff9900] text-black text-[10px] font-black px-1 py-0.2 rounded shadow-xs">
+                Whisper
+              </span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('devlab')}
+              className={`relative px-2 py-1.5 rounded-lg transition-colors whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'devlab'
+                  ? 'text-amber-400 bg-amber-950/60 font-semibold border border-amber-500/40'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Fullstack Dev Studio & Lab (freeCodeCamp & Scrimba)"
+            >
+              <Code className="w-4 h-4 text-amber-400" />
+              <span>Dev Lab</span>
+            </button>
+
+            <button
               onClick={() => setActiveTab('messages')}
               className={`relative px-2 py-1.5 rounded-lg transition-colors whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'messages'
@@ -449,6 +516,24 @@ export const Navbar: React.FC<NavbarProps> = ({
               <QrCode className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">My QR</span>
             </button>
+
+            {/* Campus Shopping Bag / Cart Button */}
+            {onOpenCart && (
+              <button
+                onClick={onOpenCart}
+                className="relative flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-950/60 text-emerald-300 border border-emerald-700/80 hover:bg-emerald-900/80 transition-colors cursor-pointer"
+                title="View Campus Shopping Bag"
+                aria-label="View Shopping Cart"
+              >
+                <ShoppingCart className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden sm:inline">Bag</span>
+                {cartCount > 0 && (
+                  <span className="w-4 h-4 rounded-full bg-emerald-500 text-slate-950 text-[10px] font-bold flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+            )}
 
             {/* Treats Sent badge */}
             <button
@@ -580,7 +665,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Mobile bottom navigation strip */}
-      <div className="lg:hidden border-t border-[#1e294b] bg-[#080d1a]/95 grid grid-cols-7 py-1 text-center">
+      <div className="lg:hidden border-t border-[#1e294b] bg-[#080d1a]/95 grid grid-cols-9 py-1 text-center">
         <button
           onClick={() => setActiveTab('feed')}
           className={`flex flex-col items-center py-1 text-[10px] ${
@@ -592,6 +677,34 @@ export const Navbar: React.FC<NavbarProps> = ({
         </button>
 
         <button
+          onClick={() => setActiveTab('marketplace')}
+          className={`relative flex flex-col items-center py-1 text-[10px] ${
+            activeTab === 'marketplace' ? 'text-emerald-400 font-bold' : 'text-slate-400'
+          }`}
+        >
+          <ShoppingBag className="w-4 h-4 mb-0.5" />
+          <span>Store</span>
+          {cartCount > 0 && (
+            <span className="absolute top-0.5 right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 text-slate-950 text-[9px] font-bold flex items-center justify-center">
+              {cartCount}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('cinema')}
+          className={`flex flex-col items-center py-1 text-[10px] ${
+            activeTab === 'cinema' || activeTab === 'cornhub' ? 'text-[#ff9900] font-bold' : 'text-slate-400'
+          }`}
+          title="ZedWhisper Video Hub"
+        >
+          <span className="font-black text-[10px] text-white">Zed</span>
+          <span className="bg-[#ff9900] text-black text-[8px] font-black px-1 rounded -mt-0.5 shadow-xs">
+            Whisper
+          </span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('mentions')}
           className={`relative flex flex-col items-center py-1 text-[10px] ${
             activeTab === 'mentions' ? 'text-emerald-400 font-bold' : 'text-slate-400'
@@ -600,7 +713,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <AtSign className="w-4 h-4 mb-0.5" />
           <span>Mentions</span>
           {mentionsCount > 0 && (
-            <span className="absolute top-0.5 right-2 w-3.5 h-3.5 rounded-full bg-emerald-500 text-slate-950 text-[9px] font-bold flex items-center justify-center">
+            <span className="absolute top-0.5 right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 text-slate-950 text-[9px] font-bold flex items-center justify-center">
               {mentionsCount}
             </span>
           )}
@@ -615,7 +728,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <Bookmark className="w-4 h-4 mb-0.5" />
           <span>Saved</span>
           {savedCount > 0 && (
-            <span className="absolute top-0.5 right-2 w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center">
+            <span className="absolute top-0.5 right-1 w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[9px] font-bold flex items-center justify-center">
               {savedCount}
             </span>
           )}
@@ -660,7 +773,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <Mail className="w-4 h-4 mb-0.5" />
           <span>DMs</span>
           {unreadCount > 0 && (
-            <span className="absolute top-0.5 right-2 w-3.5 h-3.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
+            <span className="absolute top-0.5 right-1 w-3.5 h-3.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
               {unreadCount}
             </span>
           )}

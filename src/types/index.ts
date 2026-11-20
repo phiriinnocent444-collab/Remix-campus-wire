@@ -226,3 +226,22 @@ export interface WhatsAppRelayConfig {
   customGreeting?: string;
 }
 
+export type AppTab =
+  | 'feed'
+  | 'dating'
+  | 'secret_crush'
+  | 'polls'
+  | 'messages'
+  | 'map'
+  | 'calendar'
+  | 'saved'
+  | 'mentions'
+  | 'marketplace'
+  | 'cinema'
+  | 'cornhub'
+  | 'devlab';
+
+export * from './marketplace';
+export * from './cornhub';
+export * from './studentVideo';
+export * from './devlab';

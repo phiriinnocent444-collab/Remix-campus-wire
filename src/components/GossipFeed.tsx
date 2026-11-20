@@ -5,6 +5,10 @@ import {
   GossipPost,
   UniversityId,
 } from '../types';
+import { CornVideo } from '../types/cornhub';
+import { StudentVideo } from '../types/studentVideo';
+import { CornFeedWidget } from './cornhub/CornFeedWidget';
+import { CampusVideoFeedWidget } from './video/CampusVideoFeedWidget';
 import { UNIVERSITIES } from '../data/mockData';
 import { UniversityLogo } from './UniversityLogo';
 import { FormattedMentionText } from './MentionAutocomplete';
@@ -33,6 +37,12 @@ interface GossipFeedProps {
   onOpenComposer: () => void;
   onToggleReaction?: (postId: string, commentId: string | undefined, reactionType: EmojiReactionType) => void;
   onMentionClick?: (alias: string) => void;
+  studentVideos?: StudentVideo[];
+  onSelectStudentVideo?: (video: StudentVideo) => void;
+  onOpenVideoHub?: () => void;
+  cornVideos?: CornVideo[];
+  onSelectCornVideo?: (video: CornVideo) => void;
+  onOpenCornHub?: () => void;
 }
 
 export const GossipFeed: React.FC<GossipFeedProps> = ({
@@ -45,6 +55,12 @@ export const GossipFeed: React.FC<GossipFeedProps> = ({
   onOpenComposer,
   onToggleReaction,
   onMentionClick,
+  studentVideos,
+  onSelectStudentVideo,
+  onOpenVideoHub,
+  cornVideos,
+  onSelectCornVideo,
+  onOpenCornHub,
 }) => {
   const [revealedSpoilers, setRevealedSpoilers] = useState<Record<string, boolean>>({});
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -94,16 +110,16 @@ export const GossipFeed: React.FC<GossipFeedProps> = ({
 
   return (
     <div className="space-y-4">
-      {posts.map((post) => {
+      {posts.map((post, idx) => {
         const isSpoiler = post.isSpoilerTea && !revealedSpoilers[post.id];
         const isBookmarked = bookmarkedIds.includes(post.id);
 
         return (
-          <article
-            key={post.id}
-            onClick={() => onOpenPostDetail(post)}
-            className="group bg-[#0c1527] rounded-xl border border-[#1e294b] hover:border-emerald-500/40 p-4 sm:p-5 transition-all shadow-sm hover:shadow-md cursor-pointer relative"
-          >
+          <React.Fragment key={post.id}>
+            <article
+              onClick={() => onOpenPostDetail(post)}
+              className="group bg-[#0c1527] rounded-xl border border-[#1e294b] hover:border-emerald-500/40 p-4 sm:p-5 transition-all shadow-sm hover:shadow-md cursor-pointer relative"
+            >
             {/* Header: University, Category & Time (Unboxed clean metadata with SVG logo) */}
             <div className="flex items-center justify-between gap-2 text-xs text-slate-400 mb-2.5">
               <div className="flex items-center gap-2 flex-wrap">
@@ -336,6 +352,23 @@ export const GossipFeed: React.FC<GossipFeedProps> = ({
               </div>
             </div>
           </article>
+
+          {idx === 0 && studentVideos && studentVideos.length > 0 && onSelectStudentVideo && onOpenVideoHub && (
+            <CampusVideoFeedWidget
+              videos={studentVideos}
+              onSelectVideo={onSelectStudentVideo}
+              onOpenVideoHub={onOpenVideoHub}
+            />
+          )}
+
+          {idx === 0 && (!studentVideos || studentVideos.length === 0) && cornVideos && cornVideos.length > 0 && onSelectCornVideo && onOpenCornHub && (
+            <CornFeedWidget
+              videos={cornVideos}
+              onSelectVideo={onSelectCornVideo}
+              onOpenCornHub={onOpenCornHub}
+            />
+          )}
+        </React.Fragment>
         );
       })}
     </div>

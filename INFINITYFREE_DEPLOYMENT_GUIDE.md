@@ -1,104 +1,59 @@
-# 🌐 How to Deploy ZedWhisper on InfinityFree (100% Free Hosting)
+# InfinityFree Full-Stack Hosting & Database Guide for ZedWhisper
 
-InfinityFree provides free web hosting with PHP, MySQL, unlimited bandwidth, and cPanel (VistaPanel). Here is the complete step-by-step guide to deploy **ZedWhisper** on InfinityFree with database storage and user authorization.
-
----
-
-## 1. Prerequisites (Free Accounts)
-
-1. **InfinityFree Account**: Sign up free at [infinityfree.com](https://www.infinityfree.com/).
-2. **Supabase Account (Database & Auth)**: Your project is already registered at `https://rflxrnpmmnkwnfgwldma.supabase.co`.
-3. **Node.js**: Installed locally to run `npm run build`.
+Everything is pre-configured for Apache + PHP 8.2 with automatic SQLite storage and optional InfinityFree MySQL database integration—including **Campus Buzz**, **ZedWhisper Cinema**, **ZedStore**, **Polls**, and **Dev Lab (SQL Studio & REST API Explorer)**.
 
 ---
 
-## 2. Build the Production Files
+## Step 1: Activate Your InfinityFree Account & Subdomain
 
-Inside your project folder, compile the production assets:
-
-```bash
-npm run build
-```
-
-This generates a optimized, lightweight static bundle inside the **`dist/`** directory. It already includes:
-- `index.html`
-- `assets/` (bundled JS and CSS)
-- `.htaccess` (pre-configured for Apache client-side routing and HTTPS on InfinityFree)
+1. Go to **[dash.infinityfree.com](https://dash.infinityfree.com/)** and sign in (or register) using **`phiriinnocent444@gmail.com`**.
+2. Open your Gmail inbox and click the **Verify Email Address** link from InfinityFree.
+3. Inside the InfinityFree Client Area, click **Create Account** -> select the **Free** plan.
+4. Pick any free InfinityFree subdomain (for example: `zedwhisper.infinityfreeapp.com`, `zedwhisperzm.epizy.com`, or `zedcampus.great-site.net`) and click **Check Availability** -> **Create Account**.
+5. Wait ~1–2 minutes until your hosting account status changes from *Pending* to **Active**.
 
 ---
 
-## 3. Create an InfinityFree Hosting Account
+## Step 2: Choose Your Database Mode
 
-1. Log in to [InfinityFree Client Area](https://dash.infinityfree.com/).
-2. Click **Create Account**.
-3. Choose a free domain name (e.g., `zedwhisper.great-site.net` or `zedwhisper.epizy.com`) or connect your custom `.zm` or `.com` domain.
-4. Complete the account setup and wait ~1 minute for status to turn **Active**.
+### Option A: Zero-Setup Auto Database (Recommended)
+- **No action needed!** When the site receives its first request, `api/db.php` automatically creates and seeds a protected SQLite database at `api/data/campus.db` (protected by `api/data/.htaccess` so it cannot be downloaded publicly).
+- All tables (`users`, `posts`, `comments`, `polls`, `poll_options`) and starter campus records are created automatically.
 
----
-
-## 4. Upload Files to InfinityFree `htdocs/`
-
-There are two easy methods to upload:
-
-### Method A: Web File Manager (Monsta FTP) — Fastest
-1. In your InfinityFree Dashboard, click **File Manager** (or go to [filemanager.ai](https://filemanager.ai/)).
-2. Open the **`htdocs/`** directory.
-3. Delete the default placeholder files (`DO NOT UPLOAD FILES HERE` or `index2.html`).
-4. Upload all files and folders from inside your local **`dist/`** directory directly into `htdocs/`:
-   - `index.html`
-   - `assets/` (folder with JS and CSS)
-   - `.htaccess` (makes all routes and refreshes work smoothly without 404s)
-
-### Method B: FileZilla (FTP)
-- Host: `ftpupload.net`
-- Username: Your InfinityFree vPanel username (e.g. `epiz_34567890`)
-- Password: Your InfinityFree vPanel password
-- Port: `21`
-- Remote Directory: `/htdocs/`
+### Option B: InfinityFree VistaPanel MySQL Database
+If you want to connect InfinityFree's MySQL server instead:
+1. In your InfinityFree Account overview, click **Control Panel (VistaPanel)**.
+2. Open **MySQL Databases** -> type a database name (e.g. `zedwhisper`) -> click **Create Database**.
+3. Note your VistaPanel credentials:
+   - **MySQL Host** (e.g. `sql102.infinityfree.com`)
+   - **Database Name** (e.g. `if0_12345678_zedwhisper`)
+   - **Username** (e.g. `if0_12345678`)
+   - **Password** (your hosting account password from Client Area -> **Account Details**)
+4. Open `api/config.php` in your uploaded files and replace the placeholder `DB_HOST`, `DB_NAME`, `DB_USER`, and `DB_PASS` values. `api/db.php` will automatically create and seed all MySQL tables on first visit (or you can import `api/schema.sql` in phpMyAdmin).
 
 ---
 
-## 5. Connecting Database & Authorization
+## Step 3: Upload the Production Package to `htdocs/`
 
-You have two powerful options:
+1. In your InfinityFree Account overview, click **File Manager** (Monsta File Manager) or connect via **FileZilla FTP** using the FTP Host, Username, and Password shown in your Account Details.
+2. Open the **`htdocs/`** folder.
+3. Delete any default placeholder files inside `htdocs/` (such as `index2.html` or `DO NOT UPLOAD FILES HERE`).
+4. Upload the freshly compiled contents from `public/infinityfree-htdocs.zip` (or the `dist/` build output) directly into **`htdocs/`** so the folder layout looks like this:
+   - `htdocs/.htaccess`
+   - `htdocs/index.html`
+   - `htdocs/assets/`
+   - `htdocs/api/` (`auth.php`, `config.php`, `db.php`, `dev.php`, `health.php`, `polls.php`, `posts.php`, `schema.sql`, `data/.htaccess`)
 
-### Option A: Use Supabase (Recommended — Real-Time WebSocket Multi-Phone Sync)
-Because ZedWhisper uses client-side Supabase SDK (`@supabase/supabase-js`), your InfinityFree static site connects directly to Supabase via HTTPS REST and WebSockets:
-1. Open your Supabase Dashboard at [supabase.com](https://supabase.com).
-2. Go to **SQL Editor** -> **New Query**.
-3. Paste the contents of `supabase-schema.sql` (found in your project root) and click **Run**.
-4. To enable **Supabase Authentication**:
-   - Go to **Authentication** -> **Providers** -> **Email**.
-   - Make sure **Enable Email provider** is toggled ON.
-   - (Optional) Toggle **Confirm email** OFF if you want students to sign up and whisper immediately without waiting for confirmation emails.
-5. All students opening your InfinityFree URL will instantly read, post, and sync whispers across Airtel, MTN, and Zamtel networks!
-
-### Option B: Use InfinityFree's Built-in Free MySQL Database
-If you also want local MySQL database storage on InfinityFree:
-1. In InfinityFree Control Panel (VistaPanel), click **MySQL Databases**.
-2. Create a database named `epiz_xxxx_zedwhisper`.
-3. Note your MySQL Details:
-   - MySQL Host: e.g. `sqlxxx.epizy.com`
-   - MySQL User: `epiz_xxxx`
-   - MySQL Password: Your vPanel password
-   - MySQL Database: `epiz_xxxx_zedwhisper`
-4. Click **phpMyAdmin** to inspect or import tables.
+> **Important:** Make sure `.htaccess` and `index.html` sit directly inside `htdocs/`, not nested inside an extra subfolder.
 
 ---
 
-## 6. Enable Free SSL (HTTPS)
+## Step 4: Activate Free SSL & Verify Live Site
 
-1. In your InfinityFree dashboard, click **Free SSL Certificates**.
-2. Click **New SSL Certificate**.
-3. Enter your domain name and select **Let's Encrypt** or **ZeroSSL**.
-4. Follow the 1-click DNS CNAME verification.
-5. Once issued, click **Install SSL Certificate Automatically**.
-6. The included `.htaccess` file will automatically enforce HTTPS for all visiting students!
-
----
-
-## 7. Verification Checklist
-
-- [x] Visiting your InfinityFree URL loads the ZedWhisper campus wordmark and header.
-- [x] Clicking **Campus Buzz**, **Saved Whispers**, **Map**, or **Events** loads each view without 404 errors.
-- [x] In-person WhatsApp connect button (`wa.me`) launches chat without exposing phone numbers.
+1. In the InfinityFree Client Area, open **Free SSL Certificates** -> **New SSL Certificate**.
+2. Enter your InfinityFree domain (e.g. `zedwhisper.infinityfreeapp.com`), choose **Let's Encrypt** or **ZeroSSL**, add the CNAME record automatically (1 click for InfinityFree subdomains), and click **Install SSL Certificate Automatically** once issued.
+3. Open your live site at `https://<your-subdomain>.infinityfreeapp.com`.
+4. Visit `https://<your-subdomain>.infinityfreeapp.com/api/health` to confirm:
+   - `"status": "online"`
+   - `"fullStack": true`
+   - Active database driver (`MySQL` or `SQLite Auto-Engine`).
